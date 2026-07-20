@@ -1,0 +1,338 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────
+
+enum WorkspaceRole {
+  OWNER
+  ADMIN
+  LEAD
+  DEVELOPER
+  QA
+  SUPERVISOR
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  ARCHIVED
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  READY_FOR_QA
+  COMPLETED
+  REOPENED
+  BLOCKED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum QAResult {
+  PASS
+  FAIL
+}
+
+enum BugSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum BugStatus {
+  OPEN
+  FIXED
+  WONTFIX
+}
+
+enum NotificationType {
+  TASK_ASSIGNED
+  TASK_REOPENED
+  PR_REVIEWED
+  SPRINT_SUMMARY
+  QA_APPROVED
+}
+
+enum AIVerdict {
+  LOOKS_GOOD
+  NEEDS_CHANGES
+}
+
+enum ActivityEntityType {
+  TASK
+  FEATURE
+  PROJECT
+}
+
+// ─────────────────────────────────────────────
+// CORE IDENTITY
+// ─────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String?
+  avatarUrl    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  ownedWorkspaces  Workspace[]       @relation("WorkspaceOwner")
+  workspaceMembers WorkspaceMember[]
+  ledProjects      Project[]         @relation("ProjectLead")
+  assignedTasks    Task[]            @relation("TaskAssignee")
+  qaReviews        QAReview[]
+  bugReportsFiled  BugReport[]
+  activityLogs     ActivityLog[]
+  notifications    Notification[]
+
+  @@map("users")
+}
+
+model Workspace {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  ownerId   String
+  owner     User     @relation("WorkspaceOwner", fields: [ownerId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members  WorkspaceMember[]
+  projects Project[]
+
+  @@map("workspaces")
+}
+
+model WorkspaceMember {
+  id          String        @id @default(cuid())
+  workspaceId String
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role        WorkspaceRole
+  joinedAt    DateTime      @default(now())
+
+  @@unique([workspaceId, userId])
+  @@map("workspace_members")
+}
+
+// ─────────────────────────────────────────────
+// PROJECT HIERARCHY
+// ─────────────────────────────────────────────
+
+model Project {
+  id          String        @id @default(cuid())
+  workspaceId String
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  clientName  String?
+  description String?
+  leadId      String?
+  lead        User?         @relation("ProjectLead", fields: [leadId], references: [id])
+  startDate   DateTime?
+  dueDate     DateTime?
+  status      ProjectStatus @default(ACTIVE)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  features        Feature[]
+  tasks           Task[]
+  sprintSummaries SprintSummary[]
+
+  @@index([workspaceId])
+  @@map("projects")
+}
+
+model Feature {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tasks Task[]
+
+  @@index([projectId])
+  @@map("features")
+}
+
+model Task {
+  id            String       @id @default(cuid())
+  featureId     String
+  feature       Feature      @relation(fields: [featureId], references: [id], onDelete: Cascade)
+  projectId     String
+  project       Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title         String
+  description   String?
+  assigneeId    String?
+  assignee      User?        @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  estimateDays  Float?
+  startDate     DateTime?
+  dueDate       DateTime?
+  status        TaskStatus   @default(TODO)
+  blockedReason String?
+  priority      TaskPriority @default(MEDIUM)
+  storyPoints   Int?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  subtasks     Subtask[]
+  pullRequests PullRequest[]
+  qaReviews    QAReview[]
+  bugReports   BugReport[]
+  aiReviews    AIReview[]
+
+  @@index([featureId])
+  @@index([projectId])
+  @@index([assigneeId])
+  @@index([status])
+  @@map("tasks")
+}
+
+model Subtask {
+  id        String   @id @default(cuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  title     String
+  isDone    Boolean  @default(false)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([taskId])
+  @@map("subtasks")
+}
+
+// ─────────────────────────────────────────────
+// GITHUB + AI
+// ─────────────────────────────────────────────
+
+model PullRequest {
+  id        String   @id @default(cuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  prNumber  Int
+  prUrl     String
+  status    String
+  createdAt DateTime @default(now())
+
+  aiReviews AIReview[]
+
+  @@unique([taskId, prNumber])
+  @@map("pull_requests")
+}
+
+model AIReview {
+  id            String       @id @default(cuid())
+  taskId        String
+  task          Task         @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  pullRequestId String?
+  pullRequest   PullRequest? @relation(fields: [pullRequestId], references: [id])
+  summary       String
+  issuesFound   String[]
+  verdict       AIVerdict
+  createdAt     DateTime     @default(now())
+
+  @@index([taskId])
+  @@map("ai_reviews")
+}
+
+// ─────────────────────────────────────────────
+// QA
+// ─────────────────────────────────────────────
+
+model QAReview {
+  id         String   @id @default(cuid())
+  taskId     String
+  task       Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  reviewerId String
+  reviewer   User     @relation(fields: [reviewerId], references: [id])
+  result     QAResult
+  note       String?
+  reviewedAt DateTime @default(now())
+
+  @@index([taskId])
+  @@map("qa_reviews")
+}
+
+model BugReport {
+  id           String      @id @default(cuid())
+  taskId       String
+  task         Task        @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  reportedById String
+  reportedBy   User        @relation(fields: [reportedById], references: [id])
+  title        String
+  description  String?
+  severity     BugSeverity @default(MEDIUM)
+  status       BugStatus   @default(OPEN)
+  createdAt    DateTime    @default(now())
+
+  @@index([taskId])
+  @@map("bug_reports")
+}
+
+// ─────────────────────────────────────────────
+// ACTIVITY, NOTIFICATIONS, REPORTING
+// ─────────────────────────────────────────────
+
+model ActivityLog {
+  id         String             @id @default(cuid())
+  entityType ActivityEntityType
+  entityId   String
+  actorId    String
+  actor      User               @relation(fields: [actorId], references: [id])
+  action     String
+  meta       Json?
+  createdAt  DateTime           @default(now())
+
+  @@index([entityType, entityId])
+  @@map("activity_logs")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  channel   String[]
+  payload   Json?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+model SprintSummary {
+  id               String   @id @default(cuid())
+  projectId        String
+  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  weekStart        DateTime
+  weekEnd          DateTime
+  completedCount   Int
+  pendingCount     Int
+  blockedCount     Int
+  aiRecommendation String?
+  generatedAt      DateTime @default(now())
+
+  @@index([projectId])
+  @@map("sprint_summaries")
+}
