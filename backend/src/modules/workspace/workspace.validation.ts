@@ -17,3 +17,43 @@ export const inviteMemberSchema = z.object({
     role: z.nativeEnum(WorkspaceRole),
   }),
 });
+export const workspaceIdParamsSchema = z.object({
+  params: z.object({
+    workspaceId: z.string().min(1),
+  }),
+});
+
+export const memberParamsSchema = z.object({
+  params: z.object({
+    workspaceId: z.string().min(1),
+    userId: z.string().min(1),
+  }),
+});
+
+export const updateMemberRoleSchema = z.object({
+  params: z.object({
+    workspaceId: z.string().min(1),
+    userId: z.string().min(1),
+  }),
+  body: z.object({
+    role: z.nativeEnum(WorkspaceRole),
+  }),
+});
+
+export const transferOwnershipSchema = z.object({
+  params: z.object({
+    workspaceId: z.string().min(1),
+  }),
+  body: z.object({
+    newOwnerUserId: z.string().min(1),
+  }),
+});
+
+export const updateWorkspaceSchema = z.object({
+  params: z.object({
+    workspaceId: z.string().min(1),
+  }),
+  body: z.object({
+    name: z.string().min(1).optional(),
+  }),
+});

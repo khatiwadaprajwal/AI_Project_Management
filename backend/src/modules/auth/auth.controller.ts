@@ -8,11 +8,21 @@ const authService = new AuthService();
 export const register = catchAsync(async (req: Request, res: Response) => {
   const result = await authService.register(req.body);
   sendResponse(res, {
-    statusCode: 201,
+    statusCode: 200, 
+    success: true,
+    message: result.message,
+    data: { email: result.email },
+  });
+});
+
+export const verifyOtp = catchAsync(async (req: Request, res: Response) => {
+  const result = await authService.verifyOtp(req.body);
+  sendResponse(res, {
+    statusCode: 201, 
     success: true,
     message: "User and Workspace created successfully.",
     token: result.accessToken,
-    data: result.data,
+    data: result.data, 
   });
 });
 
@@ -24,5 +34,17 @@ export const login = catchAsync(async (req: Request, res: Response) => {
     message: "Logged in successfully.",
     token: result.accessToken,
     data: result.data,
+  });
+});
+
+export const changePassword = catchAsync(async (req: Request, res: Response) => {
+
+  const userId = req.user!.id; 
+  const result = await authService.changePassword(userId, req.body);
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Password is changed sucessfully!",
+    data: null,
   });
 });

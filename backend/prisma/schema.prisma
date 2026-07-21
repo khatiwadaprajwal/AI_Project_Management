@@ -89,6 +89,7 @@ model User {
   name         String
   email        String   @unique
   passwordHash String?
+  isFirstLogin Boolean  @default(false)
   avatarUrl    String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -103,6 +104,18 @@ model User {
   notifications    Notification[]
 
   @@map("users")
+}
+model TempUser {
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  passwordHash  String
+  workspaceName String
+  otp           String
+  otpExpiresAt  DateTime
+  createdAt     DateTime @default(now())
+
+  @@map("temp_users")
 }
 
 model Workspace {
