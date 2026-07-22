@@ -72,3 +72,42 @@ export const restrictWorkspaceRole = (...allowedRoles: WorkspaceRole[]) => {
     }
   };
 };
+export const restrictNestedWorkspaceRole = (
+  allowedRoles: WorkspaceRole[],
+  resolveWorkspaceId: (req: Request) => Promise<string>,
+) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.user?.id;
+
+      if (!userId) {
+        return next(new AppError("Unauthorized request context.", 400));
+      }
+
+      const workspaceId = await resolveWorkspaceId(req);
+
+      const membership = await prisma.workspaceMember.findUnique({
+        where: {
+          workspaceId_userId: { workspaceId, userId },
+        },
+      });
+
+      if (!membership) {
+        return next(new AppError("You do not belong to this workspace.", 403));
+      }
+
+      if (!allowedRoles.includes(membership.role)) {
+        return next(
+          new AppError(
+            `Access Denied. Require one of: ${allowedRoles.join(", ")}`,
+            403,
+          ),
+        );
+      }
+
+      next();
+    } catch (error) {
+      next(error);
+    }
+  };
+};

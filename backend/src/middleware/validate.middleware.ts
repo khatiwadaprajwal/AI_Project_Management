@@ -1,9 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import { ZodType } from 'zod';
+import { ZodSchema } from 'zod';
 
-export const validate = <T extends { body?: any; query?: any; params?: any }>(
-  schema: ZodType<T>
-) =>
+export const validate = (schema: ZodSchema<any>) =>
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const parsedData = await schema.parseAsync({
@@ -12,11 +10,26 @@ export const validate = <T extends { body?: any; query?: any; params?: any }>(
         params: req.params,
       });
 
-      if (parsedData.body) req.body = parsedData.body;
-      if (parsedData.query) req.query = parsedData.query;
-      if (parsedData.params) req.params = parsedData.params;
+      req.body = parsedData.body;
 
-      next();
+
+      if (parsedData.query) {
+        Object.defineProperty(req, 'query', {
+          value: parsedData.query,
+          writable: true,
+          configurable: true,
+        });
+      }
+
+      if (parsedData.params) {
+        Object.defineProperty(req, 'params', {
+          value: parsedData.params,
+          writable: true,
+          configurable: true,
+        });
+      }
+
+      return next();
     } catch (error) {
       next(error);
     }
