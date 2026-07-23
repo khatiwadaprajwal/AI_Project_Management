@@ -24,7 +24,6 @@ enum ProjectStatus {
   ACTIVE
   ON_HOLD
   COMPLETED
-  ARCHIVED
 }
 
 enum TaskStatus {
@@ -34,6 +33,7 @@ enum TaskStatus {
   COMPLETED
   REOPENED
   BLOCKED
+  CANCELLED
 }
 
 enum TaskPriority {
@@ -158,46 +158,53 @@ model Project {
   clientName  String?
   description String?
   leadId      String?
-  lead        User?         @relation("ProjectLead", fields: [leadId], references: [id])
+  lead        User?         @relation("ProjectLead", fields: [leadId], references: [id], onDelete: SetNull)
   startDate   DateTime?
   dueDate     DateTime?
   status      ProjectStatus @default(ACTIVE)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
-
+  deletedAt    DateTime?
+  deletedBy    String?
+  deleteReason String?
   features        Feature[]
   tasks           Task[]
   sprintSummaries SprintSummary[]
 
   @@index([workspaceId])
+  @@index([workspaceId, deletedAt])
   @@map("projects")
 }
 
 model Feature {
   id        String   @id @default(cuid())
   projectId String
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Restrict)
   name      String
   order     Int      @default(0)
+  deletedAt    DateTime?
+  deletedBy    String?
+  deleteReason String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   tasks Task[]
 
   @@index([projectId])
+  @@index([projectId, deletedAt])
   @@map("features")
 }
 
 model Task {
   id            String       @id @default(cuid())
   featureId     String
-  feature       Feature      @relation(fields: [featureId], references: [id], onDelete: Cascade)
+  feature       Feature      @relation(fields: [featureId], references: [id], onDelete: Restrict)
   projectId     String
-  project       Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project       Project      @relation(fields: [projectId], references: [id], onDelete: Restrict)
   title         String
   description   String?
   assigneeId    String?
-  assignee      User?        @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  assignee      User?        @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
   estimateDays  Float?
   startDate     DateTime?
   dueDate       DateTime?
@@ -205,6 +212,12 @@ model Task {
   blockedReason String?
   priority      TaskPriority @default(MEDIUM)
   storyPoints   Int?
+  order         Int          @default(0)
+  
+  deletedAt    DateTime?
+  deletedBy    String?
+  deleteReason String?
+
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
@@ -215,7 +228,9 @@ model Task {
   aiReviews    AIReview[]
 
   @@index([featureId])
+  @@index([featureId, deletedAt])
   @@index([projectId])
+  @@index([projectId, deletedAt])
   @@index([assigneeId])
   @@index([status])
   @@map("tasks")
@@ -224,7 +239,7 @@ model Task {
 model Subtask {
   id        String   @id @default(cuid())
   taskId    String
-  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Restrict)
   title     String
   isDone    Boolean  @default(false)
   order     Int      @default(0)

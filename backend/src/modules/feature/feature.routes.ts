@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { protect, restrictNestedWorkspaceRole } from '../auth/auth.middleware';
+import { protect, attachNestedWorkspaceId } from '../auth/auth.middleware';
 import { validate } from '../../middleware/validate.middleware';
 import {
   resolveWorkspaceIdFromProject,
@@ -10,6 +10,8 @@ import {
   createFeatureSchema,
   updateFeatureSchema,
   reorderFeatureSchema,
+  deleteFeatureSchema,
+  bulkDeleteFeaturesSchema,
   featureIdParamsSchema,
   listFeaturesQuerySchema,
 } from './feature.validation';
@@ -19,8 +21,14 @@ const router = Router();
 router.use(protect);
 
 router.post(
+  '/features/bulk-delete',
+  validate(bulkDeleteFeaturesSchema),
+  featureController.bulkDeleteFeatures
+);
+
+router.post(
   '/projects/:projectId/features',
-  restrictNestedWorkspaceRole(['OWNER', 'ADMIN', 'LEAD'], async (req) =>
+  attachNestedWorkspaceId(async (req) =>
     resolveWorkspaceIdFromProject(req.params.projectId as string)
   ),
   validate(createFeatureSchema),
@@ -35,7 +43,7 @@ router.get(
 
 router.patch(
   '/features/:featureId',
-  restrictNestedWorkspaceRole(['OWNER', 'ADMIN', 'LEAD'], async (req) =>
+  attachNestedWorkspaceId(async (req) =>
     resolveWorkspaceIdFromFeature(req.params.featureId as string)
   ),
   validate(updateFeatureSchema),
@@ -44,7 +52,7 @@ router.patch(
 
 router.patch(
   '/features/:featureId/reorder',
-  restrictNestedWorkspaceRole(['OWNER', 'ADMIN', 'LEAD'], async (req) =>
+  attachNestedWorkspaceId(async (req) =>
     resolveWorkspaceIdFromFeature(req.params.featureId as string)
   ),
   validate(reorderFeatureSchema),
@@ -53,11 +61,17 @@ router.patch(
 
 router.delete(
   '/features/:featureId',
-  restrictNestedWorkspaceRole(['OWNER', 'ADMIN'], async (req) =>
+  attachNestedWorkspaceId(async (req) =>
     resolveWorkspaceIdFromFeature(req.params.featureId as string)
   ),
-  validate(featureIdParamsSchema),
+  validate(deleteFeatureSchema),
   featureController.deleteFeature
+);
+
+router.post(
+  '/features/:featureId/restore',
+  validate(featureIdParamsSchema),
+  featureController.restoreFeature
 );
 
 export const featureRoutes = router;

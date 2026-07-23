@@ -1,5 +1,6 @@
-import prisma from '../../config/db';
+import prisma, { prismaAdmin } from '../../config/db';
 import { AppError } from '../../utils/AppError';
+import { emitDomainEvent } from '../../events/eventBus';
 import {
   CreateProjectInput,
   UpdateProjectInput,
@@ -138,26 +139,63 @@ class ProjectService {
 
     return project;
   }
+    public async deleteProject(
+    workspaceId: string,
+    projectId: string,
+    deleteReason: string | undefined,
+    requesterId: string
+  ) {
+    await this.assertMember(workspaceId, requesterId); // or assertLeadPlus/OWNER-ADMIN check per your existing role rule
 
-  public async archiveProject(workspaceId: string, projectId: string, requesterId: string) {
-    await this.assertMember(workspaceId, requesterId);
-
-    const existing = await prisma.project.findFirst({ where: { id: projectId, workspaceId } });
-    if (!existing) {
+    const project = await prisma.project.findFirst({ where: { id: projectId, workspaceId } });
+    if (!project) {
       throw new AppError('Project not found.', 404);
     }
 
-    if (existing.status === 'ARCHIVED') {
-      throw new AppError('Project is already archived.', 400);
-    }
-
-    const project = await prisma.project.update({
+    const updated = await prisma.project.update({
       where: { id: projectId },
-      data: { status: 'ARCHIVED' },
+      data: { deletedAt: new Date(), deletedBy: requesterId, deleteReason },
     });
 
-    return project;
+    emitDomainEvent('project.deleted' as any, {
+      entityType: 'PROJECT',
+      entityId: projectId,
+      actorId: requesterId,
+      action: 'Project deleted',
+      meta: { deleteReason },
+    });
+
+    return updated;
   }
+
+  public async restoreProject(workspaceId: string, projectId: string, requesterId: string) {
+    await this.assertMember(workspaceId, requesterId);
+
+    const project = await prismaAdmin.project.findFirst({ where: { id: projectId, workspaceId } });
+    if (!project) {
+      throw new AppError('Project not found.', 404);
+    }
+    if (!project.deletedAt) {
+      throw new AppError('Project is not deleted.', 400);
+    }
+
+    const restored = await prisma.project.update({
+      where: { id: projectId },
+      data: { deletedAt: null, deletedBy: null, deleteReason: null },
+    });
+
+    emitDomainEvent('project.restored' as any, {
+      entityType: 'PROJECT',
+      entityId: projectId,
+      actorId: requesterId,
+      action: 'Project restored',
+    });
+
+    return restored;
+  }
+
+
+  
 }
 
 export const projectService = new ProjectService();

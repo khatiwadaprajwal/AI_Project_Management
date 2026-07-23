@@ -2,13 +2,12 @@ import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { env } from "../../config/env";
 import { AppError } from "../../utils/AppError";
-import prisma from "../../config/db";
-import { WorkspaceRole } from "@prisma/client";
 
 declare global {
   namespace Express {
     interface Request {
       user?: { id: string };
+      workspaceId?: string;
     }
   }
 }
@@ -37,74 +36,25 @@ export const protect = (req: Request, res: Response, next: NextFunction) => {
   }
 };
 
-export const restrictWorkspaceRole = (...allowedRoles: WorkspaceRole[]) => {
-  return async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const userId = req.user?.id;
-      const workspaceId = req.params.workspaceId as string;
 
-      if (!userId || !workspaceId) {
-        return next(new AppError("Unauthorized request context.", 400));
-      }
+export const attachWorkspaceId = (req: Request, res: Response, next: NextFunction) => {
+  const workspaceId = req.params.workspaceId as string;
 
-      const membership = await prisma.workspaceMember.findUnique({
-        where: {
-          workspaceId_userId: { workspaceId, userId },
-        },
-      });
+  if (!workspaceId) {
+    return next(new AppError("Unauthorized request context.", 400));
+  }
 
-      if (!membership) {
-        return next(new AppError("You do not belong to this workspace.", 403));
-      }
-
-      if (!allowedRoles.includes(membership.role)) {
-        return next(
-          new AppError(
-            `Access Denied. Require one of: ${allowedRoles.join(", ")}`,
-            403,
-          ),
-        );
-      }
-
-      next();
-    } catch (error) {
-      next(error);
-    }
-  };
+  req.workspaceId = workspaceId;
+  next();
 };
-export const restrictNestedWorkspaceRole = (
-  allowedRoles: WorkspaceRole[],
+
+
+export const attachNestedWorkspaceId = (
   resolveWorkspaceId: (req: Request) => Promise<string>,
 ) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = req.user?.id;
-
-      if (!userId) {
-        return next(new AppError("Unauthorized request context.", 400));
-      }
-
-      const workspaceId = await resolveWorkspaceId(req);
-
-      const membership = await prisma.workspaceMember.findUnique({
-        where: {
-          workspaceId_userId: { workspaceId, userId },
-        },
-      });
-
-      if (!membership) {
-        return next(new AppError("You do not belong to this workspace.", 403));
-      }
-
-      if (!allowedRoles.includes(membership.role)) {
-        return next(
-          new AppError(
-            `Access Denied. Require one of: ${allowedRoles.join(", ")}`,
-            403,
-          ),
-        );
-      }
-
+      req.workspaceId = await resolveWorkspaceId(req);
       next();
     } catch (error) {
       next(error);

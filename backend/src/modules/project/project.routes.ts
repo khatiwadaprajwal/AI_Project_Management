@@ -1,11 +1,12 @@
 import { Router } from 'express';
-import { protect, restrictWorkspaceRole } from '../auth/auth.middleware';
+import { protect, attachWorkspaceId } from '../auth/auth.middleware';
 import { validate } from '../../middleware/validate.middleware';
 import * as projectController from './project.controller';
 import {
   createProjectSchema,
   updateProjectSchema,
   updateProjectStatusSchema,
+  deleteProjectSchema,
   projectParamsSchema,
   listProjectsQuerySchema,
 } from './project.validation';
@@ -16,42 +17,51 @@ router.use(protect);
 
 router.post(
   '/:workspaceId/projects',
-  restrictWorkspaceRole('OWNER', 'ADMIN', 'LEAD'),
+  attachWorkspaceId,
   validate(createProjectSchema),
   projectController.createProject
 );
 
 router.get(
   '/:workspaceId/projects',
+  attachWorkspaceId,
   validate(listProjectsQuerySchema),
   projectController.listProjects
 );
 
 router.get(
   '/:workspaceId/projects/:projectId',
+  attachWorkspaceId,
   validate(projectParamsSchema),
   projectController.getProject
 );
 
 router.patch(
   '/:workspaceId/projects/:projectId',
-  restrictWorkspaceRole('OWNER', 'ADMIN', 'LEAD'),
+  attachWorkspaceId,
   validate(updateProjectSchema),
   projectController.updateProject
 );
 
 router.patch(
   '/:workspaceId/projects/:projectId/status',
-  restrictWorkspaceRole('OWNER', 'ADMIN', 'LEAD'),
+  attachWorkspaceId,
   validate(updateProjectStatusSchema),
   projectController.updateProjectStatus
 );
 
 router.delete(
   '/:workspaceId/projects/:projectId',
-  restrictWorkspaceRole('OWNER', 'ADMIN'),
+  attachWorkspaceId,
+  validate(deleteProjectSchema),
+  projectController.deleteProject
+);
+
+router.post(
+  '/:workspaceId/projects/:projectId/restore',
+  attachWorkspaceId,
   validate(projectParamsSchema),
-  projectController.archiveProject
+  projectController.restoreProject
 );
 
 export const projectRoutes = router;

@@ -15,7 +15,7 @@ import {
 } from "./auth.types";
 import { sendEmail } from "../../utils/mailer";
 
-export class AuthService {
+class AuthService {
 
   public async register(
     payload: RegisterInput
@@ -203,3 +203,4 @@ export class AuthService {
     };
   }
 }
+export const authService = new AuthService();

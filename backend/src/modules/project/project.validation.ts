@@ -61,3 +61,8 @@ export const listProjectsQuerySchema = z.object({
     leadId: z.string().optional(),
   }),
 });
+
+export const deleteProjectSchema = z.object({
+  params: z.object({ workspaceId: z.string().min(1), projectId: z.string().min(1) }),
+  body: z.object({ deleteReason: z.string().optional() }),
+});

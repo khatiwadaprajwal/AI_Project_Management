@@ -2,7 +2,7 @@ import { Router } from "express";
 import { register, login,verifyOtp,changePassword } from "./auth.controller";
 import { validate } from "../../middleware/validate.middleware";
 import { registerSchema, loginSchema, verifyOtpSchema, changePasswordSchema  } from "./auth.validation";
-import { protect,restrictWorkspaceRole } from "./auth.middleware";
+import { protect } from "./auth.middleware";
 const router = Router();
 
 router.post("/register", validate(registerSchema), register);

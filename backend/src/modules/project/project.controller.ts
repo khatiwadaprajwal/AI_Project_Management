@@ -68,14 +68,14 @@ export const updateProjectStatus = catchAsync(async (req: Request, res: Response
   });
 });
 
-export const archiveProject = catchAsync(async (req: Request, res: Response) => {
+export const deleteProject = catchAsync(async (req: Request, res: Response) => {
   const { workspaceId, projectId } = req.params as { workspaceId: string; projectId: string };
-  const result = await projectService.archiveProject(workspaceId, projectId, req.user!.id);
+  const result = await projectService.deleteProject(workspaceId, projectId, req.body?.deleteReason, req.user!.id);
+  sendResponse(res, { statusCode: 200, success: true, message: 'Project deleted successfully.', data: result });
+});
 
-  sendResponse(res, {
-    statusCode: 200,
-    success: true,
-    message: 'Project archived successfully.',
-    data: result,
-  });
+export const restoreProject = catchAsync(async (req: Request, res: Response) => {
+  const { workspaceId, projectId } = req.params as { workspaceId: string; projectId: string };
+  const result = await projectService.restoreProject(workspaceId, projectId, req.user!.id);
+  sendResponse(res, { statusCode: 200, success: true, message: 'Project restored successfully.', data: result });
 });

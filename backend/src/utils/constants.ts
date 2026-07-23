@@ -1,0 +1,1 @@
+export const CASCADE_DELETE_REASON = 'Parent feature deleted' as const;
