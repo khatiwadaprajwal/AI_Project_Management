@@ -74,6 +74,17 @@ enum AIVerdict {
   NEEDS_CHANGES
 }
 
+enum AiSuggestionEntityType {
+  FEATURE
+  TASK
+}
+
+enum AiSuggestionStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
 enum ActivityEntityType {
   TASK
   FEATURE
@@ -281,6 +292,24 @@ model AIReview {
 
   @@index([taskId])
   @@map("ai_reviews")
+}
+
+model AiSuggestion {
+  id           String                @id @default(cuid())
+  entityType   AiSuggestionEntityType
+  entityId     String
+  title        String
+  description  String?
+  priority     TaskPriority?
+  estimateDays Float?
+  storyPoints  Int?
+  rank         Int
+  status       AiSuggestionStatus    @default(PENDING)
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+
+  @@index([entityType, entityId, status])
+  @@map("ai_suggestions")
 }
 
 // ─────────────────────────────────────────────

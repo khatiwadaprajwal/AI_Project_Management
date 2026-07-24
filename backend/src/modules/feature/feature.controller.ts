@@ -44,3 +44,9 @@ export const bulkDeleteFeatures = catchAsync(async (req: Request, res: Response)
   const result = await featureService.bulkDeleteFeatures(featureIds, deleteReason, req.user!.id);
   sendResponse(res, { statusCode: 200, success: true, message: 'Features deleted successfully.', data: result });
 });
+
+export const listDeletedFeatures = catchAsync(async (req: Request, res: Response) => {
+  const projectId = req.params.projectId as string;
+  const result = await featureService.listDeletedFeatures(projectId, req.user!.id);
+  sendResponse(res, { statusCode: 200, success: true, message: 'Deleted features retrieved.', data: result });
+});

@@ -1,11 +1,6 @@
 import { z } from 'zod';
 import { ProjectStatus } from '@prisma/client';
 import { paginationQuerySchema } from '../../utils/pagination/pagination.schema';
-export const workspaceIdParamsSchema = z.object({
-  params: z.object({
-    workspaceId: z.string().min(1),
-  }),
-});
 
 export const projectParamsSchema = z.object({
   params: z.object({

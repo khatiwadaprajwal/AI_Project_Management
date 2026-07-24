@@ -4,3 +4,13 @@ node_modules
 
 /src/generated/prisma
 /prisma/migrations
+
+# Seed & testing artifacts
+SEED_DATA.md
+*.seed.md
+seed-output/
+test-results/
+SEED_AI_TEST.md
+seed.mjs
+test-results.md
+e2e-test.mjs

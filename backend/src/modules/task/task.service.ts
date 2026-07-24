@@ -362,6 +362,15 @@ class TaskService {
 
     return { subtasksDeleted: subtaskIds.length };
   }
+  public async listDeletedTasks(projectId: string, requesterId: string) {
+  const workspaceId = await resolveWorkspaceIdFromProject(projectId);
+  await this.assertMember(workspaceId, requesterId);
+
+  return prismaAdmin.task.findMany({
+    where: { projectId, deletedAt: { not: null } },
+    orderBy: { deletedAt: 'desc' },
+  });
+}
 }
 
 export const taskService = new TaskService();

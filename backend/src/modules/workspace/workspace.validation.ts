@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { WorkspaceRole } from "@prisma/client";
+export { workspaceIdParamsSchema } from "../../utils/commonParams.schema";
 
 export const createWorkspaceSchema = z.object({
   body: z.object({
@@ -17,12 +18,6 @@ export const inviteMemberSchema = z.object({
     role: z.nativeEnum(WorkspaceRole),
   }),
 });
-export const workspaceIdParamsSchema = z.object({
-  params: z.object({
-    workspaceId: z.string().min(1),
-  }),
-});
-
 export const memberParamsSchema = z.object({
   params: z.object({
     workspaceId: z.string().min(1),

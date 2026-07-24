@@ -1,13 +1,6 @@
 import { z } from 'zod';
 import { paginationQuerySchema } from '../../utils/pagination/pagination.schema';
-
-export const projectIdParamsSchema = z.object({
-  params: z.object({ projectId: z.string().min(1) }),
-});
-
-export const featureIdParamsSchema = z.object({
-  params: z.object({ featureId: z.string().min(1) }),
-});
+export { projectIdParamsSchema, featureIdParamsSchema } from "../../utils/commonParams.schema";
 
 export const createFeatureSchema = z.object({
   params: z.object({ projectId: z.string().min(1) }),

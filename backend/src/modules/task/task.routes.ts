@@ -10,7 +10,7 @@ import {
   createTaskSchema, updateTaskSchema, updateTaskStatusSchema, assignTaskSchema,
   reorderTaskSchema, deleteTaskSchema, bulkDeleteTasksSchema,
   createSubtaskSchema, updateSubtaskSchema, reorderSubtaskSchema, bulkDeleteSubtasksSchema,
-  taskIdParamsSchema, subtaskIdParamsSchema, listTasksQuerySchema, listMyTasksQuerySchema,
+  taskIdParamsSchema, subtaskIdParamsSchema, listTasksQuerySchema, listMyTasksQuerySchema,projectIdParamsSchema
 } from './task.validation';
 
 const router = Router();
@@ -34,7 +34,11 @@ router.get('/tasks/mine', validate(listMyTasksQuerySchema), taskController.listM
 router.get('/projects/:projectId/tasks', validate(listTasksQuerySchema), taskController.listTasksByProject);
 
 router.get('/tasks/:taskId', validate(taskIdParamsSchema), taskController.getTask);
-
+router.get(
+  '/projects/:projectId/tasks/trash',
+  validate(projectIdParamsSchema),
+  taskController.listDeletedTasks
+);
 router.patch(
   '/tasks/:taskId',
   attachNestedWorkspaceId(async (req) =>

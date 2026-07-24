@@ -14,6 +14,8 @@ const EnvSchema = z.object({
   GMAIL_PASS: z.string(),
   GMAIL_HOST: z.string().default("smtp.gmail.com"),
   GMAIL_PORT: z.string().default("587"),
+  GEMINI_API_KEY: z.string().min(1).optional(),
+  GROQ_API_KEY: z.string().min(1).optional(),
 });
 const _env = EnvSchema.safeParse(process.env);
 

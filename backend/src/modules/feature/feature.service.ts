@@ -242,6 +242,16 @@ class FeatureService {
 
     return result;
   }
+
+public async listDeletedFeatures(projectId: string, requesterId: string) {
+  const workspaceId = await resolveWorkspaceIdFromProject(projectId);
+  await this.assertMember(workspaceId, requesterId);
+
+  return prismaAdmin.feature.findMany({
+    where: { projectId, deletedAt: { not: null } },
+    orderBy: { deletedAt: 'desc' },
+  });
+}
 }
 
 export const featureService = new FeatureService();

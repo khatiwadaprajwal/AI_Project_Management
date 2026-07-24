@@ -97,3 +97,14 @@ export const bulkDeleteSubtasks = catchAsync(async (req: Request, res: Response)
   const result = await taskService.bulkDeleteSubtasks(subtaskIds, req.user!.id);
   sendResponse(res, { statusCode: 200, success: true, message: 'Subtasks deleted successfully.', data: result });
 });
+export const listDeletedTasks = catchAsync(async (req: Request, res: Response) => {
+  const projectId = req.params.projectId as string;
+  const result = await taskService.listDeletedTasks(projectId, req.user!.id);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: 'Deleted tasks retrieved successfully.',
+    data: result,
+  });
+});

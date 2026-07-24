@@ -14,6 +14,8 @@ import {
   bulkDeleteFeaturesSchema,
   featureIdParamsSchema,
   listFeaturesQuerySchema,
+  projectIdParamsSchema
+
 } from './feature.validation';
 
 const router = Router();
@@ -74,4 +76,5 @@ router.post(
   featureController.restoreFeature
 );
 
+router.get('/projects/:projectId/features/trash', validate(projectIdParamsSchema), featureController.listDeletedFeatures);
 export const featureRoutes = router;

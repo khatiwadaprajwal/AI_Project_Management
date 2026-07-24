@@ -9,6 +9,7 @@ import {workspaceRoutes} from './modules/workspace/workspace.routes'
 import { projectRoutes } from './modules/project/project.routes';
 import { featureRoutes } from './modules/feature/feature.routes';
 import { taskRoutes } from "./modules/task/task.routes";
+import { aiSuggestionRoutes } from './modules/ai/aiSuggestion.routes';
 export const app = express();
 
 app.use(cors({ origin: env.CLIENT_URL, credentials: true }));
@@ -20,5 +21,6 @@ app.use('/api/v1/workspaces',workspaceRoutes)
 app.use('/api/v1/workspaces', projectRoutes);
 app.use('/api/v1', featureRoutes);
 app.use('/api/v1', taskRoutes);
+app.use('/api/v1', aiSuggestionRoutes);
 app.use(notFoundHandler);
 app.use(globalErrorHandler);
