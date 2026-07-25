@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { catchAsync } from '../../utils/catchAsync';
 import { sendResponse } from '../../utils/sendResponse';
+import type { PaginationParams } from '../../utils/pagination/pagination';
+import type { ListTasksQuery } from './task.types';
 import { taskService } from './task.service';
 
 export const createTask = catchAsync(async (req: Request, res: Response) => {
@@ -10,13 +12,13 @@ export const createTask = catchAsync(async (req: Request, res: Response) => {
 });
 
 export const listMyTasks = catchAsync(async (req: Request, res: Response) => {
-  const result = await taskService.listMyTasks(req.user!.id, req.query as any);
+  const result = await taskService.listMyTasks(req.user!.id, req.query as unknown as PaginationParams);
   sendResponse(res, { statusCode: 200, success: true, message: 'Your tasks retrieved successfully.', data: result });
 });
 
 export const listTasksByProject = catchAsync(async (req: Request, res: Response) => {
   const projectId = req.params.projectId as string;
-  const result = await taskService.listTasksByProject(projectId, req.user!.id, req.query as any);
+  const result = await taskService.listTasksByProject(projectId, req.user!.id, req.query as unknown as ListTasksQuery);
   sendResponse(res, { statusCode: 200, success: true, message: 'Tasks retrieved successfully.', data: result });
 });
 

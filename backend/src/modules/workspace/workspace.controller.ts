@@ -1,9 +1,7 @@
 import { Request, Response } from "express";
 import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
-import { WorkspaceService } from "./workspace.service";
-
-const workspaceService = new WorkspaceService();
+import { workspaceService } from "./workspace.service";
 
 export const createWorkspace = catchAsync(
   async (req: Request, res: Response) => {

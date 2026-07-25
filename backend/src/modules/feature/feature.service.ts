@@ -1,5 +1,7 @@
 import prisma, { prismaAdmin } from '../../config/db';
 import { AppError } from '../../utils/AppError';
+import { CASCADE_DELETE_REASON } from '../../utils/constants';
+import { assertMember, assertLeadPlus } from '../../utils/authorization';
 import { getPaginationParams, buildPaginationMeta } from '../../utils/pagination/pagination';
 import { reorderWithinScope } from '../../utils/reorder';
 import {
@@ -14,27 +16,9 @@ import {
 } from './feature.types';
 
 class FeatureService {
-  private async assertMember(workspaceId: string, userId: string) {
-    const membership = await prisma.workspaceMember.findUnique({
-      where: { workspaceId_userId: { workspaceId, userId } },
-    });
-    if (!membership) {
-      throw new AppError('You are not a member of this workspace.', 403);
-    }
-    return membership;
-  }
-
-  private async assertLeadPlus(workspaceId: string, userId: string) {
-    const membership = await this.assertMember(workspaceId, userId);
-    if (!['OWNER', 'ADMIN', 'LEAD'].includes(membership.role)) {
-      throw new AppError('Requires OWNER, ADMIN, or LEAD role.', 403);
-    }
-    return membership;
-  }
-
   public async createFeature(projectId: string, payload: CreateFeatureInput, requesterId: string) {
     const workspaceId = await resolveWorkspaceIdFromProject(projectId);
-    await this.assertLeadPlus(workspaceId, requesterId);
+    await assertLeadPlus(workspaceId, requesterId);
 
     const count = await prisma.feature.count({ where: { projectId } });
 
@@ -59,7 +43,7 @@ class FeatureService {
     query: { page: number; limit: number }
   ) {
     const workspaceId = await resolveWorkspaceIdFromProject(projectId);
-    await this.assertMember(workspaceId, requesterId);
+    await assertMember(workspaceId, requesterId);
 
     const where = { projectId };
 
@@ -77,7 +61,7 @@ class FeatureService {
 
   public async updateFeature(featureId: string, payload: UpdateFeatureInput, requesterId: string) {
     const workspaceId = await resolveWorkspaceIdFromFeature(featureId);
-    await this.assertLeadPlus(workspaceId, requesterId);
+    await assertLeadPlus(workspaceId, requesterId);
 
     const existing = await prisma.feature.findUnique({ where: { id: featureId } });
     if (!existing) throw new AppError('Feature not found.', 404);
@@ -90,7 +74,7 @@ class FeatureService {
     if (!feature) throw new AppError('Feature not found.', 404);
 
     const workspaceId = await resolveWorkspaceIdFromFeature(featureId);
-    await this.assertLeadPlus(workspaceId, requesterId);
+    await assertLeadPlus(workspaceId, requesterId);
 
     await prisma.$transaction(async (tx) => {
       await reorderWithinScope({
@@ -110,7 +94,7 @@ class FeatureService {
   // later brings everything back exactly as it was.
   public async deleteFeature(featureId: string, deleteReason: string | undefined, requesterId: string) {
     const workspaceId = await resolveWorkspaceIdFromFeature(featureId);
-    await this.assertLeadPlus(workspaceId, requesterId);
+    await assertLeadPlus(workspaceId, requesterId);
 
     const feature = await prisma.feature.findUnique({ where: { id: featureId } });
     if (!feature) throw new AppError('Feature not found.', 404);
@@ -130,7 +114,7 @@ class FeatureService {
       if (taskIds.length > 0) {
         await tx.task.updateMany({
           where: { id: { in: taskIds } },
-          data: { deletedAt: now, deletedBy: requesterId, deleteReason: 'Parent feature deleted' },
+          data: { deletedAt: now, deletedBy: requesterId, deleteReason: CASCADE_DELETE_REASON },
         });
 
         await tx.subtask.updateMany({
@@ -160,7 +144,7 @@ class FeatureService {
     if (!feature.deletedAt) throw new AppError('Feature is not deleted.', 400);
 
     const workspaceId = await resolveWorkspaceIdFromProject(feature.projectId);
-    await this.assertLeadPlus(workspaceId, requesterId);
+    await assertLeadPlus(workspaceId, requesterId);
 
     const result = await prisma.$transaction(async (tx) => {
       const restoredFeature = await tx.feature.update({
@@ -171,7 +155,7 @@ class FeatureService {
       // Only restore tasks that were deleted AS A RESULT of this feature's
       // deletion (deleteReason marker), not tasks independently deleted before.
       const restoredTasks = await tx.task.updateMany({
-        where: { featureId, deleteReason: 'Parent feature deleted' },
+        where: { featureId, deleteReason: CASCADE_DELETE_REASON },
         data: { deletedAt: null, deletedBy: null, deleteReason: null },
       });
 
@@ -205,7 +189,7 @@ class FeatureService {
     }
 
     const workspaceId = await resolveWorkspaceIdFromProject(projectIds[0]);
-    await this.assertLeadPlus(workspaceId, requesterId);
+    await assertLeadPlus(workspaceId, requesterId);
 
     const now = new Date();
 
@@ -225,7 +209,7 @@ class FeatureService {
       if (taskIds.length > 0) {
         await tx.task.updateMany({
           where: { id: { in: taskIds } },
-          data: { deletedAt: now, deletedBy: requesterId, deleteReason: 'Parent feature deleted' },
+          data: { deletedAt: now, deletedBy: requesterId, deleteReason: CASCADE_DELETE_REASON },
         });
       }
 
@@ -245,7 +229,7 @@ class FeatureService {
 
 public async listDeletedFeatures(projectId: string, requesterId: string) {
   const workspaceId = await resolveWorkspaceIdFromProject(projectId);
-  await this.assertMember(workspaceId, requesterId);
+  await assertMember(workspaceId, requesterId);
 
   return prismaAdmin.feature.findMany({
     where: { projectId, deletedAt: { not: null } },

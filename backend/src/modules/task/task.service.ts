@@ -1,5 +1,6 @@
 import prisma, { prismaAdmin } from '../../config/db';
 import { AppError } from '../../utils/AppError';
+import { assertMember, assertLeadPlus, assertAssigneeIsMember } from '../../utils/authorization';
 import { getPaginationParams, buildPaginationMeta } from '../../utils/pagination/pagination';
 import { reorderWithinScope } from '../../utils/reorder';
 import {
@@ -15,38 +16,15 @@ import {
 } from './task.types';
 
 class TaskService {
-  private async assertMember(workspaceId: string, userId: string) {
-    const membership = await prisma.workspaceMember.findUnique({
-      where: { workspaceId_userId: { workspaceId, userId } },
-    });
-    if (!membership) throw new AppError('You are not a member of this workspace.', 403);
-    return membership;
-  }
-
-  private async assertLeadPlus(workspaceId: string, userId: string) {
-    const membership = await this.assertMember(workspaceId, userId);
-    if (!['OWNER', 'ADMIN', 'LEAD'].includes(membership.role)) {
-      throw new AppError('Requires OWNER, ADMIN, or LEAD role.', 403);
-    }
-    return membership;
-  }
-
-  private async assertAssigneeIsMember(workspaceId: string, assigneeId: string) {
-    const membership = await prisma.workspaceMember.findUnique({
-      where: { workspaceId_userId: { workspaceId, userId: assigneeId } },
-    });
-    if (!membership) throw new AppError('The assignee must be a member of this workspace.', 400);
-  }
-
   public async createTask(featureId: string, payload: CreateTaskInput, requesterId: string) {
     const workspaceId = await resolveWorkspaceIdFromFeature(featureId);
-    await this.assertLeadPlus(workspaceId, requesterId);
+    await assertLeadPlus(workspaceId, requesterId);
 
     const feature = await prisma.feature.findUnique({ where: { id: featureId } });
     if (!feature) throw new AppError('Feature not found.', 404);
 
     if (payload.assigneeId) {
-      await this.assertAssigneeIsMember(workspaceId, payload.assigneeId);
+      await assertAssigneeIsMember(workspaceId, payload.assigneeId);
     }
 
     const count = await prisma.task.count({ where: { featureId } });
@@ -86,7 +64,7 @@ class TaskService {
 
   public async listTasksByProject(projectId: string, requesterId: string, query: ListTasksQuery) {
     const workspaceId = await resolveWorkspaceIdFromProject(projectId);
-    await this.assertMember(workspaceId, requesterId);
+    await assertMember(workspaceId, requesterId);
 
     const { status, assigneeId, priority, featureId, page, limit } = query;
     const where = {
@@ -107,7 +85,7 @@ class TaskService {
 
   public async getTaskById(taskId: string, requesterId: string) {
     const workspaceId = await resolveWorkspaceIdFromTask(taskId);
-    await this.assertMember(workspaceId, requesterId);
+    await assertMember(workspaceId, requesterId);
 
     const task = await prisma.task.findUnique({ where: { id: taskId }, include: { subtasks: true } });
     if (!task) throw new AppError('Task not found.', 404);
@@ -116,7 +94,7 @@ class TaskService {
 
   public async updateTask(taskId: string, payload: UpdateTaskInput, requesterId: string) {
     const workspaceId = await resolveWorkspaceIdFromTask(taskId);
-    await this.assertLeadPlus(workspaceId, requesterId);
+    await assertLeadPlus(workspaceId, requesterId);
 
     const existing = await prisma.task.findUnique({ where: { id: taskId } });
     if (!existing) throw new AppError('Task not found.', 404);
@@ -126,7 +104,7 @@ class TaskService {
 
   public async updateTaskStatus(taskId: string, payload: UpdateTaskStatusInput, requesterId: string) {
     const workspaceId = await resolveWorkspaceIdFromTask(taskId);
-    await this.assertMember(workspaceId, requesterId);
+    await assertMember(workspaceId, requesterId);
 
     const task = await prisma.task.findUnique({ where: { id: taskId } });
     if (!task) throw new AppError('Task not found.', 404);
@@ -167,13 +145,13 @@ class TaskService {
 
   public async assignTask(taskId: string, payload: AssignTaskInput, requesterId: string) {
     const workspaceId = await resolveWorkspaceIdFromTask(taskId);
-    await this.assertLeadPlus(workspaceId, requesterId);
+    await assertLeadPlus(workspaceId, requesterId);
 
     const task = await prisma.task.findUnique({ where: { id: taskId } });
     if (!task) throw new AppError('Task not found.', 404);
 
     if (payload.assigneeId) {
-      await this.assertAssigneeIsMember(workspaceId, payload.assigneeId);
+      await assertAssigneeIsMember(workspaceId, payload.assigneeId);
     }
 
     const updated = await prisma.task.update({
@@ -194,7 +172,7 @@ class TaskService {
     if (!task) throw new AppError('Task not found.', 404);
 
     const workspaceId = await resolveWorkspaceIdFromTask(taskId);
-    await this.assertLeadPlus(workspaceId, requesterId);
+    await assertLeadPlus(workspaceId, requesterId);
 
     await prisma.$transaction(async (tx) => {
       await reorderWithinScope({
@@ -213,7 +191,7 @@ class TaskService {
   // through this task, which is now hidden by the default client).
   public async deleteTask(taskId: string, deleteReason: string | undefined, requesterId: string) {
     const workspaceId = await resolveWorkspaceIdFromTask(taskId);
-    await this.assertLeadPlus(workspaceId, requesterId);
+    await assertLeadPlus(workspaceId, requesterId);
 
     const task = await prisma.task.findUnique({ where: { id: taskId } });
     if (!task) throw new AppError('Task not found.', 404);
@@ -247,7 +225,7 @@ class TaskService {
     }
 
     const workspaceId = await resolveWorkspaceIdFromProject(task.projectId);
-    await this.assertLeadPlus(workspaceId, requesterId);
+    await assertLeadPlus(workspaceId, requesterId);
 
     const restored = await prisma.task.update({
       where: { id: taskId },
@@ -271,7 +249,7 @@ class TaskService {
     }
 
     const workspaceId = await resolveWorkspaceIdFromProject(projectIds[0]);
-    await this.assertLeadPlus(workspaceId, requesterId);
+    await assertLeadPlus(workspaceId, requesterId);
 
     await prisma.task.updateMany({
       where: { id: { in: taskIds } },
@@ -290,7 +268,7 @@ class TaskService {
 
   public async createSubtask(taskId: string, payload: CreateSubtaskInput, requesterId: string) {
     const workspaceId = await resolveWorkspaceIdFromTask(taskId);
-    await this.assertMember(workspaceId, requesterId);
+    await assertMember(workspaceId, requesterId);
 
     const count = await prisma.subtask.count({ where: { taskId } });
 
@@ -304,7 +282,7 @@ class TaskService {
     if (!subtask) throw new AppError('Subtask not found.', 404);
 
     const workspaceId = await resolveWorkspaceIdFromTask(subtask.taskId);
-    await this.assertMember(workspaceId, requesterId);
+    await assertMember(workspaceId, requesterId);
 
     return prisma.subtask.update({ where: { id: subtaskId }, data: payload });
   }
@@ -314,7 +292,7 @@ class TaskService {
     if (!subtask) throw new AppError('Subtask not found.', 404);
 
     const workspaceId = await resolveWorkspaceIdFromTask(subtask.taskId);
-    await this.assertMember(workspaceId, requesterId);
+    await assertMember(workspaceId, requesterId);
 
     await prisma.$transaction(async (tx) => {
       await reorderWithinScope({
@@ -334,7 +312,7 @@ class TaskService {
     if (!subtask) throw new AppError('Subtask not found.', 404);
 
     const workspaceId = await resolveWorkspaceIdFromTask(subtask.taskId);
-    await this.assertMember(workspaceId, requesterId);
+    await assertMember(workspaceId, requesterId);
 
     await prisma.subtask.delete({ where: { id: subtaskId } });
 
@@ -356,7 +334,7 @@ class TaskService {
     }
 
     const workspaceId = await resolveWorkspaceIdFromTask(taskIds[0]);
-    await this.assertMember(workspaceId, requesterId);
+    await assertMember(workspaceId, requesterId);
 
     await prisma.subtask.deleteMany({ where: { id: { in: subtaskIds } } });
 
@@ -364,7 +342,7 @@ class TaskService {
   }
   public async listDeletedTasks(projectId: string, requesterId: string) {
   const workspaceId = await resolveWorkspaceIdFromProject(projectId);
-  await this.assertMember(workspaceId, requesterId);
+  await assertMember(workspaceId, requesterId);
 
   return prismaAdmin.task.findMany({
     where: { projectId, deletedAt: { not: null } },

@@ -26,14 +26,15 @@ class AuthService {
     if (existingUser) throw new AppError("Email is already registered.", 409);
 
     const passwordHash = await bcrypt.hash(password, 12);
-    const otp = Math.floor(100000 + Math.random() * 900000).toString(); 
-    const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000); 
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpHash = await bcrypt.hash(otp, 10);
+    const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
 
     await prisma.tempUser.upsert({
       where: { email },
-      update: { name, passwordHash, workspaceName, otp, otpExpiresAt },
-      create: { name, email, passwordHash, workspaceName, otp, otpExpiresAt },
+      update: { name, passwordHash, workspaceName, otp: otpHash, otpExpiresAt },
+      create: { name, email, passwordHash, workspaceName, otp: otpHash, otpExpiresAt },
     });
 
     await sendEmail(
@@ -56,7 +57,7 @@ class AuthService {
     const tempUser = await prisma.tempUser.findUnique({ where: { email } });
     if (!tempUser) throw new AppError("No pending registration found for this email.", 404);
 
-    if (tempUser.otp !== otp) throw new AppError("Invalid OTP.", 400);
+    if (!(await bcrypt.compare(otp, tempUser.otp))) throw new AppError("Invalid OTP.", 400);
     if (tempUser.otpExpiresAt < new Date()) throw new AppError("OTP has expired.", 400);
 
     const randomSuffix = Math.random().toString(36).substring(2, 7);

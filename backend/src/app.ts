@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import { env } from "./config/env";
 import { globalErrorHandler } from './middleware/globalErrorHandler';
@@ -12,6 +13,7 @@ import { taskRoutes } from "./modules/task/task.routes";
 import { aiSuggestionRoutes } from './modules/ai/aiSuggestion.routes';
 export const app = express();
 
+app.use(helmet());
 app.use(cors({ origin: env.CLIENT_URL, credentials: true }));
 app.use(express.json());
 app.use(cookieParser());

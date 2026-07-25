@@ -1,5 +1,6 @@
 import prisma, { prismaAdmin } from '../../config/db';
 import { AppError } from '../../utils/AppError';
+import { assertMember, assertLeadIsMember } from '../../utils/authorization';
 import { emitDomainEvent } from '../../events/eventBus';
 import {
   CreateProjectInput,
@@ -9,34 +10,15 @@ import {
 } from './project.types';
 import { getPaginationParams, buildPaginationMeta  } from '../../utils/pagination/pagination';
 class ProjectService {
-  private async assertMember(workspaceId: string, userId: string) {
-    const membership = await prisma.workspaceMember.findUnique({
-      where: { workspaceId_userId: { workspaceId, userId } },
-    });
-    if (!membership) {
-      throw new AppError('You are not a member of this workspace.', 403);
-    }
-    return membership;
-  }
-
-  private async assertLeadIsMember(workspaceId: string, leadId: string) {
-    const leadMembership = await prisma.workspaceMember.findUnique({
-      where: { workspaceId_userId: { workspaceId, userId: leadId } },
-    });
-    if (!leadMembership) {
-      throw new AppError('The assigned lead must be a member of this workspace.', 400);
-    }
-  }
-
   public async createProject(
     workspaceId: string,
     payload: CreateProjectInput,
     requesterId: string
   ) {
-    await this.assertMember(workspaceId, requesterId);
+    await assertMember(workspaceId, requesterId);
 
     if (payload.leadId) {
-      await this.assertLeadIsMember(workspaceId, payload.leadId);
+      await assertLeadIsMember(workspaceId, payload.leadId);
     }
 
     const project = await prisma.project.create({
@@ -55,7 +37,7 @@ class ProjectService {
   }
 
  public async listProjects(workspaceId: string, requesterId: string, query: ListProjectsQuery) {
-  await this.assertMember(workspaceId, requesterId);
+  await assertMember(workspaceId, requesterId);
 
   const { status, clientName, leadId, page, limit } = query;
   const where = {
@@ -81,7 +63,7 @@ class ProjectService {
 }
 
   public async getProjectById(workspaceId: string, projectId: string, requesterId: string) {
-    await this.assertMember(workspaceId, requesterId);
+    await assertMember(workspaceId, requesterId);
 
     const project = await prisma.project.findFirst({
       where: { id: projectId, workspaceId },
@@ -100,7 +82,7 @@ class ProjectService {
     payload: UpdateProjectInput,
     requesterId: string
   ) {
-    await this.assertMember(workspaceId, requesterId);
+    await assertMember(workspaceId, requesterId);
 
     const existing = await prisma.project.findFirst({ where: { id: projectId, workspaceId } });
     if (!existing) {
@@ -108,7 +90,7 @@ class ProjectService {
     }
 
     if (payload.leadId) {
-      await this.assertLeadIsMember(workspaceId, payload.leadId);
+      await assertLeadIsMember(workspaceId, payload.leadId);
     }
 
     const project = await prisma.project.update({
@@ -125,7 +107,7 @@ class ProjectService {
     payload: UpdateProjectStatusInput,
     requesterId: string
   ) {
-    await this.assertMember(workspaceId, requesterId);
+    await assertMember(workspaceId, requesterId);
 
     const existing = await prisma.project.findFirst({ where: { id: projectId, workspaceId } });
     if (!existing) {
@@ -145,7 +127,7 @@ class ProjectService {
     deleteReason: string | undefined,
     requesterId: string
   ) {
-    await this.assertMember(workspaceId, requesterId); // or assertLeadPlus/OWNER-ADMIN check per your existing role rule
+    await assertMember(workspaceId, requesterId); // or assertLeadPlus/OWNER-ADMIN check per your existing role rule
 
     const project = await prisma.project.findFirst({ where: { id: projectId, workspaceId } });
     if (!project) {
@@ -157,7 +139,7 @@ class ProjectService {
       data: { deletedAt: new Date(), deletedBy: requesterId, deleteReason },
     });
 
-    emitDomainEvent('project.deleted' as any, {
+    emitDomainEvent('project.deleted', {
       entityType: 'PROJECT',
       entityId: projectId,
       actorId: requesterId,
@@ -169,7 +151,7 @@ class ProjectService {
   }
 
   public async restoreProject(workspaceId: string, projectId: string, requesterId: string) {
-    await this.assertMember(workspaceId, requesterId);
+    await assertMember(workspaceId, requesterId);
 
     const project = await prismaAdmin.project.findFirst({ where: { id: projectId, workspaceId } });
     if (!project) {
@@ -184,7 +166,7 @@ class ProjectService {
       data: { deletedAt: null, deletedBy: null, deleteReason: null },
     });
 
-    emitDomainEvent('project.restored' as any, {
+    emitDomainEvent('project.restored', {
       entityType: 'PROJECT',
       entityId: projectId,
       actorId: requesterId,

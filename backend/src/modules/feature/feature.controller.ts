@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { catchAsync } from '../../utils/catchAsync';
 import { sendResponse } from '../../utils/sendResponse';
+import type { PaginationParams } from '../../utils/pagination/pagination';
 import { featureService } from './feature.service';
 
 export const createFeature = catchAsync(async (req: Request, res: Response) => {
@@ -11,7 +12,7 @@ export const createFeature = catchAsync(async (req: Request, res: Response) => {
 
 export const listFeatures = catchAsync(async (req: Request, res: Response) => {
   const projectId = req.params.projectId as string;
-  const result = await featureService.listFeatures(projectId, req.user!.id, req.query as any);
+  const result = await featureService.listFeatures(projectId, req.user!.id, req.query as unknown as PaginationParams);
   sendResponse(res, { statusCode: 200, success: true, message: 'Features retrieved successfully.', data: result });
 });
 

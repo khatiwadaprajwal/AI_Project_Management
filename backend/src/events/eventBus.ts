@@ -6,6 +6,8 @@ export type DomainEventName =
   | 'feature.created'
   | 'feature.deleted'
   | 'feature.restored'
+  | 'project.deleted'
+  | 'project.restored'
   | 'task.created'
   | 'task.statusChanged'
   | 'task.deleted'

@@ -5,7 +5,7 @@ import prisma from "../../config/db";
 import { AppError } from "../../utils/AppError";
 import { CreateWorkspaceBody, InviteMemberBody,UpdateMemberRoleInput,TransferOwnershipInput,UpdateWorkspaceInput } from "./workspace.types";
 import { sendEmail } from "../../utils/mailer";
-export class WorkspaceService {
+class WorkspaceService {
   public async createWorkspace(userId: string, payload: CreateWorkspaceBody) {
     const { name } = payload;
     const randomSuffix = Math.random().toString(36).substring(2, 7);
@@ -250,10 +250,13 @@ public async deleteWorkspace(workspaceId: string, requesterId: string) {
     throw new AppError('Only the OWNER can delete this workspace.', 403);
   }
 
-  await prisma.workspace.delete({ where: { id: workspaceId } });
+  await prisma.workspace.update({
+    where: { id: workspaceId },
+    data: { deletedAt: new Date(), deletedBy: requesterId, deleteReason: 'Workspace deleted by owner' },
+  });
 
   return { workspaceId, deleted: true };
 }
-
-  
 }
+
+export const workspaceService = new WorkspaceService();
