@@ -8,7 +8,7 @@ import {
   resolveWorkspaceIdFromFeature,
   resolveWorkspaceIdFromTask,
 } from '../../utils/resolveWorkspace';
-import { isValidTransition } from './task.statemachine';
+import { isValidTransition, isQaOnlyTransition } from './task.statemachine';
 import { emitDomainEvent } from '../../events/eventBus';
 import {
   CreateTaskInput, UpdateTaskInput, UpdateTaskStatusInput, AssignTaskInput,
@@ -73,10 +73,11 @@ class TaskService {
       ...(assigneeId && { assigneeId }),
       ...(priority && { priority }),
       ...(featureId && { featureId }),
+      
     };
 
     const [tasks, total] = await Promise.all([
-      prisma.task.findMany({ where, ...getPaginationParams({ page, limit }), orderBy: { createdAt: 'desc' } }),
+      prisma.task.findMany({ where, ...getPaginationParams({ page, limit }), orderBy: { createdAt: 'asc' } }),
       prisma.task.count({ where }),
     ]);
 
@@ -121,6 +122,10 @@ class TaskService {
 
     if (!isValidTransition(task.status, payload.status)) {
       throw new AppError(`Cannot transition task from ${task.status} to ${payload.status}.`, 400);
+    }
+
+    if (isQaOnlyTransition(task.status, payload.status)) {
+      throw new AppError(`Transition from ${task.status} to ${payload.status} requires a QA review.`, 403);
     }
 
     if (payload.status === 'BLOCKED' && !payload.blockedReason) {

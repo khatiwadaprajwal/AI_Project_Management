@@ -31,6 +31,7 @@ export const registerActivityLogSubscriber = () => {
     'task.restored',
     'task.assigned',
     'subtask.deleted',
+    'qa.reviewed',
   ];
 
   events.forEach((eventName) => {

@@ -13,7 +13,8 @@ export type DomainEventName =
   | 'task.deleted'
   | 'task.restored'
   | 'task.assigned'
-  | 'subtask.deleted';
+  | 'subtask.deleted'
+  | 'qa.reviewed';
 
 export interface DomainEventPayload {
   entityType: 'PROJECT' | 'FEATURE' | 'TASK';

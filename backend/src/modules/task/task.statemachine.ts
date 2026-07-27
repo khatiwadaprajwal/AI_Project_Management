@@ -10,9 +10,17 @@ const ALLOWED_TRANSITIONS: Record<TaskStatus, TaskStatus[]> = {
   CANCELLED: [],
 };
 
+const QA_ONLY_TRANSITIONS: Partial<Record<TaskStatus, TaskStatus[]>> = {
+  READY_FOR_QA: ['COMPLETED', 'REOPENED'],
+};
+
 export const isValidTransition = (from: TaskStatus, to: TaskStatus): boolean => {
   if (from === to) return false;
   return ALLOWED_TRANSITIONS[from]?.includes(to) ?? false;
+};
+
+export const isQaOnlyTransition = (from: TaskStatus, to: TaskStatus): boolean => {
+  return QA_ONLY_TRANSITIONS[from]?.includes(to) ?? false;
 };
 
 export const getAllowedNextStatuses = (from: TaskStatus): TaskStatus[] => {

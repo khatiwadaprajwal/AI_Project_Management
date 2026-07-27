@@ -9,7 +9,7 @@ const handle = async (payload: DomainEventPayload) => {
       await aiSuggestionService.generateForTask(payload.entityId);
     }
   } catch (err) {
-    // AI suggestion generation must never break the primary operation.
+
     console.error('Failed to generate AI suggestions:', err);
   }
 };

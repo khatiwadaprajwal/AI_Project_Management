@@ -11,6 +11,7 @@ import { projectRoutes } from './modules/project/project.routes';
 import { featureRoutes } from './modules/feature/feature.routes';
 import { taskRoutes } from "./modules/task/task.routes";
 import { aiSuggestionRoutes } from './modules/ai/aiSuggestion.routes';
+import { qaReviewRoutes } from './modules/qa/qaReview.routes';
 export const app = express();
 
 app.use(helmet());
@@ -24,5 +25,6 @@ app.use('/api/v1/workspaces', projectRoutes);
 app.use('/api/v1', featureRoutes);
 app.use('/api/v1', taskRoutes);
 app.use('/api/v1', aiSuggestionRoutes);
+app.use('/api/v1', qaReviewRoutes);
 app.use(notFoundHandler);
 app.use(globalErrorHandler);
