@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { useMutation } from '@tanstack/react-query'
-import { registerUser } from '@/lib/api/auth'
+import { useRegister } from '@/hooks/use-auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -24,13 +23,7 @@ export default function RegisterPage() {
     workspaceName: '',
   })
 
-  const mutation = useMutation({
-    mutationFn: registerUser,
-    onSuccess: (res) => {
-      const email = res.data.data.email
-      navigate(`/verify-otp?email=${encodeURIComponent(email)}`)
-    },
-  })
+  const mutation = useRegister()
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
@@ -38,7 +31,12 @@ export default function RegisterPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    mutation.mutate(form)
+    mutation.mutate(form, {
+      onSuccess: (res) => {
+        const email = res.data.data.email
+        navigate(`/verify-otp?email=${encodeURIComponent(email)}`)
+      },
+    })
   }
 
   const errorMsg =

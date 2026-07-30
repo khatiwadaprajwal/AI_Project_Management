@@ -1,8 +1,6 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { useMutation } from '@tanstack/react-query'
-import { loginUser } from '@/lib/api/auth'
-import { useAuthStore } from '@/store/authStore'
+import { Link } from 'react-router-dom'
+import { useLogin } from '@/hooks/use-auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -17,20 +15,8 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert'
 
 export default function LoginPage() {
-  const navigate = useNavigate()
-  const setAuth = useAuthStore((s) => s.setAuth)
   const [form, setForm] = useState({ email: '', password: '' })
-
-  const mutation = useMutation({
-    mutationFn: loginUser,
-    onSuccess: (res) => {
-      const { token, data } = res.data
-      if (token && data && 'user' in data) {
-        setAuth(token, data.user, data.workspaces)
-        navigate('/')
-      }
-    },
-  })
+  const mutation = useLogin()
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))

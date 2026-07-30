@@ -4,6 +4,7 @@ import {
   inviteMember,
   getWorkspace,
   listMembers,
+  listWorkspaces,
   updateMemberRole,
   removeMember,
   transferOwnership,
@@ -26,6 +27,7 @@ const router = Router();
 
 router.use(protect);
 
+router.get("/", listWorkspaces);
 router.post("/", validate(createWorkspaceSchema), createWorkspace);
 
 router.get("/:workspaceId", attachWorkspaceId, validate(workspaceIdParamsSchema), getWorkspace);

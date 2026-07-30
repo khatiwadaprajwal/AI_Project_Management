@@ -3,6 +3,18 @@ import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
 import { workspaceService } from "./workspace.service";
 
+export const listWorkspaces = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.user!.id;
+  const result = await workspaceService.listWorkspaces(userId);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: 'Workspaces retrieved successfully.',
+    data: result,
+  });
+});
+
 export const createWorkspace = catchAsync(
   async (req: Request, res: Response) => {
     const userId = req.user!.id;

@@ -1,8 +1,6 @@
 import { useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useMutation } from '@tanstack/react-query'
-import { verifyOtp } from '@/lib/api/auth'
-import { useAuthStore } from '@/store/authStore'
+import { useSearchParams } from 'react-router-dom'
+import { useVerifyOtp } from '@/hooks/use-auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -17,22 +15,10 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert'
 
 export default function VerifyOtpPage() {
-  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const email = searchParams.get('email') || ''
-  const setAuth = useAuthStore((s) => s.setAuth)
   const [otp, setOtp] = useState('')
-
-  const mutation = useMutation({
-    mutationFn: verifyOtp,
-    onSuccess: (res) => {
-      const { token, data } = res.data
-      if (token && data && 'user' in data) {
-        setAuth(token, data.user, data.workspaces)
-        navigate('/')
-      }
-    },
-  })
+  const mutation = useVerifyOtp()
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()

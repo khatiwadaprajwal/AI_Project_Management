@@ -6,6 +6,21 @@ import { AppError } from "../../utils/AppError";
 import { CreateWorkspaceBody, InviteMemberBody,UpdateMemberRoleInput,TransferOwnershipInput,UpdateWorkspaceInput } from "./workspace.types";
 import { sendEmail } from "../../utils/mailer";
 class WorkspaceService {
+  public async listWorkspaces(userId: string) {
+    const memberships = await prisma.workspaceMember.findMany({
+      where: { userId },
+      include: { workspace: true },
+      orderBy: { joinedAt: 'asc' },
+    });
+
+    return memberships.map((m) => ({
+      id: m.workspace.id,
+      name: m.workspace.name,
+      slug: m.workspace.slug,
+      role: m.role,
+    }));
+  }
+
   public async createWorkspace(userId: string, payload: CreateWorkspaceBody) {
     const { name } = payload;
     const randomSuffix = Math.random().toString(36).substring(2, 7);
