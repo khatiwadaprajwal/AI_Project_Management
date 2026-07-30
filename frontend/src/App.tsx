@@ -1,40 +1,62 @@
-import { Badge } from '@/components/ui/badge'
+import { Routes, Route, Navigate } from 'react-router-dom'
+import { useAuthStore } from '@/store/authStore'
+import RegisterPage from '@/pages/RegisterPage'
+import VerifyOtpPage from '@/pages/VerifyOtpPage'
+import LoginPage from '@/pages/LoginPage'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
-function App() {
+function HomePage() {
+  const { user, workspaces, logout } = useAuthStore()
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-100 p-4">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-lg">
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Welcome</CardTitle>
-            <Badge>SDLC</Badge>
-          </div>
-          <CardDescription>Frontend initialized with shadcn/ui</CardDescription>
+          <CardTitle>Welcome, {user?.name}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Name</Label>
-            <Input id="name" placeholder="Enter your name" />
+          <p className="text-sm text-muted-foreground">Email: {user?.email}</p>
+          <div>
+            <h3 className="font-medium mb-2">Workspaces</h3>
+            {workspaces.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No workspaces</p>
+            ) : (
+              <ul className="space-y-1">
+                {workspaces.map((ws) => (
+                  <li key={ws.id} className="text-sm">
+                    {ws.name} <span className="text-muted-foreground">({ws.role})</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
+          <Button variant="outline" onClick={logout}>
+            Logout
+          </Button>
         </CardContent>
-        <CardFooter className="flex justify-between">
-          <Button variant="outline">Cancel</Button>
-          <Button>Submit</Button>
-        </CardFooter>
       </Card>
     </div>
   )
 }
 
-export default App
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />
+}
+
+function GuestRoute({ children }: { children: React.ReactNode }) {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  return isAuthenticated ? <Navigate to="/" replace /> : <>{children}</>
+}
+
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
+      <Route path="/register" element={<GuestRoute><RegisterPage /></GuestRoute>} />
+      <Route path="/verify-otp" element={<GuestRoute><VerifyOtpPage /></GuestRoute>} />
+      <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
+    </Routes>
+  )
+}
